@@ -1,29 +1,41 @@
-// подключаем Telegram WebApp
 const tg = window.Telegram.WebApp;
-
-// говорим Telegram, что приложение готово
 tg.ready();
 
-// получаем пользователя
-const user = tg.initDataUnsafe?.user;
+// получаем userId из Telegram
+const userId = tg.initDataUnsafe?.user?.id;
 
-// если приложение открыли НЕ через Telegram
-if (!user) {
-  document.body.innerHTML = `
-    <h2>❌ Ошибка</h2>
-    <p>Откройте приложение через Telegram-бота</p>
-  `;
-  throw new Error('Telegram user not found');
+// элемент для текста
+const statusEl = document.getElementById('status');
+
+// если вдруг открыли не из Telegram
+if (!userId) {
+  statusEl.innerText = '❌ Откройте приложение через Telegram';
+  throw new Error('No Telegram user');
 }
 
-// userId из Telegram (настоящий)
-const userId = user.id;
+// проверяем доступ через API
+fetch('http://localhost:3000/check-access', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ userId })
+})
+  .then(res => res.json())
+  .then(data => {
+    if (data.access === 'none') {
+      statusEl.innerText = '❌ Доступа нет';
+    }
 
-// показываем в интерфейсе
-document.getElementById('user').innerText =
-  `Ваш Telegram ID: ${userId}`;
+    if (data.access === 'free') {
+      statusEl.innerHTML = '✅ Доступ открыт<br>Версия: <b>Free</b>';
+    }
 
-// отправляем сигнал боту
-tg.sendData(JSON.stringify({
-  action: 'open_app'
-}));
+    if (data.access === 'premium') {
+      statusEl.innerHTML = '⭐ Доступ открыт<br>Версия: <b>PREMIUM</b>';
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    statusEl.innerText = '⚠️ Ошибка проверки доступа';
+  });
