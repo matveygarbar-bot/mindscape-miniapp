@@ -1,0 +1,40 @@
+{
+  "970029553": {
+    "mode": "free",
+    "expiresAt": null,
+    "notifiedUnsubscribed": false,
+    "currentPaymentCode": null,
+    "createdAt": 1767906897396,
+    "lastAccess": 1767906897396
+  },
+  "1491652072": {
+    "mode": "free",
+    "expiresAt": null,
+    "notifiedUnsubscribed": true,
+    "currentPaymentCode": null,
+    "createdAt": 1767904252292,
+    "lastAccess": 1767904252292
+  },
+  "5020987929": {
+    "mode": "premium",
+    "expiresAt": 1775682548210,
+    "notifiedUnsubscribed": false,
+    "currentPaymentCode": null
+  },
+  "5289759735": {
+    "mode": "free",
+    "expiresAt": null,
+    "notifiedUnsubscribed": false,
+    "currentPaymentCode": null,
+    "createdAt": 1767777667615,
+    "lastAccess": 1767777667615
+  },
+  "6071950125": {
+    "mode": "free",
+    "expiresAt": null,
+    "notifiedUnsubscribed": true,
+    "currentPaymentCode": null,
+    "createdAt": 1767795478909,
+    "lastAccess": 1767795478909
+  }
+}
