@@ -1,4 +1,4 @@
-export default function NotesIsland({ notes, activeId, onSelect, setShowArchive }) {
+export default function NotesIsland({ notes, activeId, onSelect, setShowArchive, addNotification }) {
   return (
     <div className="island">
       <div className="island-title">История мыслей</div>

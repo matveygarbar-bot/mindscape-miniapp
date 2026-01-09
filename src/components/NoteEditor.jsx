@@ -5,7 +5,11 @@ const SYMBOL_MAP = {
   '○': { off: '○', on: '●' },
   '▢': { off: '▢', on: '▣' },
   '•': { off: '•', on: '◉' },
-  '✔': { off: '✔', on: '✔️' }
+  '✔': { off: '✔', on: '✔️' },
+  '→': { off: '→', on: '✓' },
+  '☐': { off: '☐', on: '☑' },
+  '◦': { off: '◦', on: '●' },
+  '□': { off: '□', on: '■' }
 };
 
 export default function NoteEditor({
@@ -17,17 +21,23 @@ export default function NoteEditor({
   actionsOpen,
   setActionsOpen,
   isPremium,
-  setToast
+  setToast,
+  addNotification
 }) {
   const active = notes.find(n => n.id === activeNoteId);
 
   const [tempTitle, setTempTitle] = useState(() => active?.isNew ? '' : active?.title || '');
+  const [showSymbols, setShowSymbols] = useState(false);
   const textareaRef = useRef(null);
   const touchStartX = useRef(0);
 
   function createNote() {
     if (!canCreateNote(notes, isPremium)) {
-      setToast('⛔ Максимум 5 заметок в Free версии');
+      if (addNotification) {
+        addNotification('Ошибка', 'Максимум 5 заметок в Free версии', 'error');
+      } else {
+        setToast('⛔ Максимум 5 заметок в Free версии');
+      }
       return;
     }
 
@@ -39,6 +49,10 @@ export default function NoteEditor({
     };
 
     setNotes([...notes, note]);
+
+    if (addNotification) {
+      addNotification('Успешно', 'Новая заметка создана', 'success');
+    }
   }
 
   function finalizeTitle() {
@@ -97,7 +111,7 @@ export default function NoteEditor({
       else if (firstChar === on) newSymbol = off;
     }
 
-    const cleanLine = line.replace(/^[✔○●▢▣•◉]\s*/, '');
+    const cleanLine = line.replace(/^[✔○●▢▣•◉→✓☐☑◦□■]\s*/, '');
     const newLine = `${newSymbol} ${cleanLine}`;
 
     const newText =
@@ -114,6 +128,9 @@ export default function NoteEditor({
         lineStart + newLine.length;
       textarea.focus();
     });
+
+    // Скрываем панель символов после вставки
+    setShowSymbols(false);
   }
 
   if (!active) {
@@ -154,12 +171,27 @@ export default function NoteEditor({
         onChange={e => updateText(e.target.value)}
       />
 
-      <div className="symbols">
-        {['✔', '○', '▢', '•'].map(s => (
-          <button key={s} onClick={() => insertSymbol(s)}>
-            {s}
-          </button>
-        ))}
+      <div className="symbols-controls">
+        <button
+          className="symbols-toggle"
+          onClick={() => setShowSymbols(!showSymbols)}
+        >
+          {showSymbols ? 'Скрыть символы' : 'Добавить символы'}
+        </button>
+
+        {showSymbols && (
+          <div className="symbols">
+            {['✔', '○', '▢', '•', '→', '☐', '◦', '□'].map(s => (
+              <button
+                key={s}
+                onClick={() => insertSymbol(s)}
+                title={`Вставить символ ${s}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className={`actions ${actionsOpen ? 'show' : ''}`}>

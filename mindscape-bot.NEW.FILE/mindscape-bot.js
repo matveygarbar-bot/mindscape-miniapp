@@ -86,6 +86,107 @@ function ensureUser(id) {
 // =====================
 const lastBotMessages = {};
 
+// =====================
+// 🔔 СИСТЕМА НАПОМИНАНИЙ
+// =====================
+const reminders = {};
+
+// Функция для добавления напоминания
+function addReminder(userId, message, time, date, repeat = 'no') {
+  const reminderId = Date.now().toString();
+
+  if (!reminders[userId]) {
+    reminders[userId] = {};
+  }
+
+  reminders[userId][reminderId] = {
+    id: reminderId,
+    message: message,
+    time: time,
+    date: date,
+    repeat: repeat,
+    createdAt: Date.now()
+  };
+
+  console.log(`Напоминание добавлено для пользователя ${userId}: ${message} на ${date} ${time}`);
+  return reminderId;
+}
+
+// Функция для проверки и отправки напоминаний
+async function checkAndSendReminders() {
+  const now = new Date();
+  const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  const currentDate = now.toISOString().split('T')[0];
+
+  console.log(`Проверка напоминаний: ${currentTime}, ${currentDate}`);
+  console.log(`Всего пользователей с напоминаниями: ${Object.keys(reminders).length}`);
+
+  for (const userId in reminders) {
+    console.log(`Проверяем напоминания для пользователя ${userId}, всего: ${Object.keys(reminders[userId]).length}`);
+    for (const reminderId in reminders[userId]) {
+      const reminder = reminders[userId][reminderId];
+      console.log(`Проверяем напоминание: ${reminderId}, время: ${reminder.time}, дата: ${reminder.date}, сообщение: ${reminder.message}`);
+
+      if (reminder.time === currentTime && reminder.date === currentDate) {
+        try {
+          // Отправляем напоминание пользователю
+          await bot.sendMessage(userId, `🔔 Вам пришло напоминание:\n\n${reminder.message}`);
+
+          console.log(`Напоминание отправлено пользователю ${userId}: ${reminder.message}`);
+
+          // Если напоминание с повтором, обновляем дату
+          if (reminder.repeat !== 'no') {
+            const newDate = getNextRepeatDate(reminder.date, reminder.repeat);
+            reminder.date = newDate;
+            console.log(`Обновлена дата напоминания для повтора: ${newDate}`);
+          } else {
+            // Удаляем одноразовое напоминание
+            delete reminders[userId][reminderId];
+            if (Object.keys(reminders[userId]).length === 0) {
+              delete reminders[userId];
+            }
+            console.log(`Удалено одноразовое напоминание для пользователя ${userId}`);
+          }
+        } catch (error) {
+          console.error(`Ошибка при отправке напоминания пользователю ${userId}:`, error);
+          // Если ошибка связанна с тем, что пользователь заблокировал бота, удаляем напоминание
+          if (error.response && error.response.body &&
+              (error.response.body.error_code === 403 || error.response.body.description.includes('blocked'))) {
+            delete reminders[userId][reminderId];
+            if (Object.keys(reminders[userId]).length === 0) {
+              delete reminders[userId];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Функция для вычисления следующей даты повтора
+function getNextRepeatDate(currentDate, repeatType) {
+  const date = new Date(currentDate);
+
+  switch (repeatType) {
+    case 'daily':
+      date.setDate(date.getDate() + 1);
+      break;
+    case 'weekly':
+      date.setDate(date.getDate() + 7);
+      break;
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
+    default:
+      return currentDate;
+  }
+
+  return date.toISOString().split('T')[0];
+}
+
+// Планировщик задач - проверяет напоминания каждую минуту
+setInterval(checkAndSendReminders, 60000); // 60000 мс = 1 минута
+
 async function setMenuButton(chatId) {
   try {
     await bot.setChatMenuButton({
@@ -723,14 +824,74 @@ app.post('/create-payment', (req, res) => {
     }
 });
 
-// 5. Проверка состояния сервера
+// 5. Добавление напоминания
+app.post('/reminders', (req, res) => {
+    console.log('Получен запрос на создание напоминания:', req.body);
+    try {
+        const { userId, message, time, date, repeat = 'no' } = req.body;
+
+        if (!userId || !message || !time || !date) {
+            console.log('Ошибка: Отсутствуют обязательные поля', { userId, message, time, date });
+            return res.status(400).json({ error: 'User ID, message, time, and date are required' });
+        }
+
+        const reminderId = addReminder(userId, message, time, date, repeat);
+
+        console.log(`Напоминание успешно добавлено для пользователя ${userId}:`, { reminderId, message, time, date, repeat });
+
+        res.json({
+            success: true,
+            reminderId: reminderId,
+            message: 'Напоминание успешно добавлено'
+        });
+    } catch (error) {
+        console.error('Error in /reminders:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 6. Получение напоминаний пользователя
+app.get('/reminders/:userId', (req, res) => {
+    const { userId } = req.params;
+
+    if (!reminders[userId]) {
+        return res.json({ reminders: [] });
+    }
+
+    const userReminders = Object.values(reminders[userId]);
+    res.json({ reminders: userReminders });
+});
+
+// 7. Удаление напоминания
+app.delete('/reminders/:userId/:reminderId', (req, res) => {
+    const { userId, reminderId } = req.params;
+
+    if (!reminders[userId] || !reminders[userId][reminderId]) {
+        return res.status(404).json({ error: 'Reminder not found' });
+    }
+
+    delete reminders[userId][reminderId];
+
+    // Если у пользователя больше нет напоминаний, удаляем его из списка
+    if (Object.keys(reminders[userId]).length === 0) {
+        delete reminders[userId];
+    }
+
+    res.json({
+        success: true,
+        message: 'Напоминание успешно удалено'
+    });
+});
+
+// 8. Проверка состояния сервера
 app.get('/status', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: Date.now(),
         users: Object.keys(users).length,
         payments: Object.keys(payments).length,
-        pendingPayments: Object.values(payments).filter(p => p.status === 'pending').length
+        pendingPayments: Object.values(payments).filter(p => p.status === 'pending').length,
+        reminders: Object.keys(reminders).reduce((count, userId) => count + Object.keys(reminders[userId]).length, 0)
     });
 });
 
@@ -792,7 +953,7 @@ setInterval(() => {
 // =====================
 // 🚀 ЗАПУСК СЕРВЕРА
 // =====================
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`🌐 Сервер запущен на порту ${PORT}`);
@@ -801,6 +962,9 @@ app.listen(PORT, () => {
   console.log(`   GET  /user/:userId - Информация о пользователе`);
   console.log(`   POST /check-payment - Проверка статуса платежа`);
   console.log(`   POST /create-payment - Создание платежа`);
+  console.log(`   POST /reminders - Создание напоминания`);
+  console.log(`   GET  /reminders/:userId - Получение напоминаний пользователя`);
+  console.log(`   DELETE /reminders/:userId/:reminderId - Удаление напоминания`);
   console.log(`   GET  /status - Статус сервера`);
 });
 

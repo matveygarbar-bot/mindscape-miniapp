@@ -16,6 +16,7 @@ function Thoughts({
   setToast,
   showArchive,
   setShowArchive,
+  addNotification,
 }) {
   return (
     <div className="section-content thoughts-layout"> {/* Добавил thoughts-layout для Flexbox */}
@@ -36,6 +37,7 @@ function Thoughts({
           isPremium={isPremium}
           onBack={() => setShowArchive(false)}
           setToast={setToast}
+          addNotification={addNotification}
         />
       ) : (
         <>
@@ -47,6 +49,7 @@ function Thoughts({
               setActionsOpen(false);
             }}
             setShowArchive={setShowArchive} // Передаем функцию для открытия архива
+            addNotification={addNotification}
           />
           <NoteEditor
             notes={notes}
@@ -58,6 +61,7 @@ function Thoughts({
             setActionsOpen={setActionsOpen}
             isPremium={isPremium}
             setToast={setToast}
+            addNotification={addNotification}
           />
         </>
       )}

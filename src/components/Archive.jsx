@@ -8,14 +8,23 @@ export default function Archive({
   isPremium,
   onBack,
   setToast,
+  addNotification,
 }) {
   function restoreNote(noteToRestore) {
     if (notes.length >= 5 && !isPremium) {
-      setToast('⛔ Максимум 5 заметок в Free версии');
+      if (addNotification) {
+        addNotification('Ошибка', 'Максимум 5 заметок в Free версии', 'error');
+      } else {
+        setToast('⛔ Максимум 5 заметок в Free версии');
+      }
       return;
     }
     setArchive(archive.filter(note => note.id !== noteToRestore.id));
     setNotes([...notes, { ...noteToRestore, isNew: false }]);
+
+    if (addNotification) {
+      addNotification('Успешно', 'Заметка восстановлена из архива', 'success');
+    }
   }
 
   return (
