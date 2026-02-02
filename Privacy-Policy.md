@@ -1,10 +1,10 @@
-Политика конфиденциальности для Telegram-бота MindScape
+Настоящая Политика конфиденциальности описывает, как Telegram-бот MindScape собирает, использует и защищает информацию, которую вы предоставляете при использовании наших услуг. Используя Бот, вы соглашаетесь с сбором и использованием информации в соответствии с настоящей политикой.
 
 Дата вступления в силу: 2 февраля 2026 года
 
 1. Введение
 
-Настоящая Политика конфиденциальности описывает, как Telegram-бот MindScape (далее — "Бот", "мы", "нас" или "наш") собирает, использует и защищает информацию, которую вы предоставляете при использовании наших услуг. Используя Бот, вы соглашаетесь с сбором и использованием информации в соответствии с настоящей политикой.
+Telegram-бот MindScape собирает, использует и защищает информацию, которую вы предоставляете при использовании наших услуг. Используя Бот, вы соглашаетесь с сбором и использованием информации в соответствии с настоящей политикой.
 
 2. Сбор информации
 
@@ -97,13 +97,13 @@
 Если у вас есть вопросы о настоящей Политике конфиденциальности, пожалуйста, свяжитесь с нами по адресу: @MindScape_support_bot
 
 
-Privacy Policy for MindScape Telegram Bot
+This Privacy Policy describes how MindScape Telegram Bot collects, uses, and protects the information you provide when using our services. By using the Bot, you consent to the collection and use of information in accordance with this policy.
 
 Effective Date: February 2, 2026
 
 1. Introduction
 
-This Privacy Policy describes how MindScape Telegram Bot (the "Bot", "we", "us", or "our") collects, uses, and protects the information you provide when using our services. By using the Bot, you consent to the collection and use of information in accordance with this policy.
+MindScape Telegram Bot collects, uses, and protects the information you provide when using our services. By using the Bot, you consent to the collection and use of information in accordance with this policy.
 
 2. Information Collection
 
