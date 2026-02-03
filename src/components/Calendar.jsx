@@ -14,7 +14,7 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
   const [newTask, setNewTask] = useState('');
   const [view, setView] = useState('month'); // 'month', 'week'
 
-  // Функция для получения текущей недели (понедельник текущей недели)
+  // Функция для получения начала текущей недели (понедельник текущей недели)
   const getCurrentWeekStart = () => {
     const d = new Date();
     const day = d.getDay();
@@ -24,15 +24,15 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
 
   // Функция для получения дня недели в винительном падеже
   const getCorrectWeekday = (date) => {
-    const weekdays = {
-      0: t('sunday'), // Воскресенье в винительном падеже
-      1: t('monday'), // Понедельник в винительном падеже
-      2: t('tuesday'),     // Вторник в винительном падеже
-      3: t('wednesday'),       // Среда в винительном падеже
-      4: t('thursday'),     // Четверг в винительном падеже
-      5: t('friday'),     // Пятница в винительном падеже
-      6: t('saturday')      // Суббота в винительном падеже
-    };
+    const weekdays = [
+      t('sundayAccusative') || t('sunday') || 'воскресенье',
+      t('mondayAccusative') || t('monday') || 'понедельник',
+      t('tuesdayAccusative') || t('tuesday') || 'вторник',
+      t('wednesdayAccusative') || t('wednesday') || 'среду',
+      t('thursdayAccusative') || t('thursday') || 'четверг',
+      t('fridayAccusative') || t('friday') || 'пятницу',
+      t('saturdayAccusative') || t('saturday') || 'субботу'
+    ];
 
     const dayIndex = date.getDay();
     return weekdays[dayIndex];
@@ -40,20 +40,20 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
 
   // Функция для получения месяца в родительном падеже
   const getCorrectMonth = (date) => {
-    const months = {
-      0: t('january'),
-      1: t('february'),
-      2: t('march'),
-      3: t('april'),
-      4: t('may'),
-      5: t('june'),
-      6: t('july'),
-      7: t('august'),
-      8: t('september'),
-      9: t('october'),
-      10: t('november'),
-      11: t('december')
-    };
+    const months = [
+      t('januaryGenitive') || t('january') || 'января',
+      t('februaryGenitive') || t('february') || 'февраля',
+      t('marchGenitive') || t('march') || 'марта',
+      t('aprilGenitive') || t('april') || 'апреля',
+      t('mayGenitive') || t('may') || 'мая',
+      t('juneGenitive') || t('june') || 'июня',
+      t('julyGenitive') || t('july') || 'июля',
+      t('augustGenitive') || t('august') || 'августа',
+      t('septemberGenitive') || t('september') || 'сентября',
+      t('octoberGenitive') || t('october') || 'октября',
+      t('novemberGenitive') || t('november') || 'ноября',
+      t('decemberGenitive') || t('december') || 'декабря'
+    ];
 
     const monthIndex = date.getMonth();
     return months[monthIndex];
@@ -61,20 +61,20 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
 
   // Функция для получения названия месяца для заголовка календаря
   const getMonthName = (date) => {
-    const months = {
-      0: t('january'),
-      1: t('february'),
-      2: t('march'),
-      3: t('april'),
-      4: t('may'),
-      5: t('june'),
-      6: t('july'),
-      7: t('august'),
-      8: t('september'),
-      9: t('october'),
-      10: t('november'),
-      11: t('december')
-    };
+    const months = [
+      t('januaryNominative') || t('january') || 'Январь',
+      t('februaryNominative') || t('february') || 'Февраль',
+      t('marchNominative') || t('march') || 'Март',
+      t('aprilNominative') || t('april') || 'Апрель',
+      t('mayNominative') || t('may') || 'Май',
+      t('juneNominative') || t('june') || 'Июнь',
+      t('julyNominative') || t('july') || 'Июль',
+      t('augustNominative') || t('august') || 'Август',
+      t('septemberNominative') || t('september') || 'Сентябрь',
+      t('octoberNominative') || t('october') || 'Октябрь',
+      t('novemberNominative') || t('november') || 'Ноябрь',
+      t('decemberNominative') || t('december') || 'Декабрь'
+    ];
 
     const monthIndex = date.getMonth();
     return months[monthIndex];
@@ -83,6 +83,34 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
   // Функция для отображения месяца и года
   const getMonthYearDisplay = (date) => {
     return `${getMonthName(date)} ${date.getFullYear()}`;
+  };
+
+  // Функция для получения кратких названий дней недели на русском
+  const getShortWeekdayNames = () => {
+    return [
+      t('sundayShort') || 'Вс',
+      t('mondayShort') || 'Пн',
+      t('tuesdayShort') || 'Вт',
+      t('wednesdayShort') || 'Ср',
+      t('thursdayShort') || 'Чт',
+      t('fridayShort') || 'Пт',
+      t('saturdayShort') || 'Сб'
+    ];
+  };
+
+  // Функция для получения названия дня недели на русском
+  const getWeekdayName = (date) => {
+    const weekdays = [
+      t('sundayNominative') || t('sunday') || 'Воскресенье',
+      t('mondayNominative') || t('monday') || 'Понедельник',
+      t('tuesdayNominative') || t('tuesday') || 'Вторник',
+      t('wednesdayNominative') || t('wednesday') || 'Среда',
+      t('thursdayNominative') || t('thursday') || 'Четверг',
+      t('fridayNominative') || t('friday') || 'Пятница',
+      t('saturdayNominative') || t('saturday') || 'Суббота'
+    ];
+
+    return weekdays[date.getDay()];
   };
 
   // Функция для обновления месяца
@@ -345,11 +373,22 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
     const weekStart = getCurrentWeekStart();
     const days = [];
 
+    // Русские названия дней недели
+    const weekdayNames = [
+      t('sundayShort') || 'Вс',
+      t('mondayShort') || 'Пн',
+      t('tuesdayShort') || 'Вт',
+      t('wednesdayShort') || 'Ср',
+      t('thursdayShort') || 'Чт',
+      t('fridayShort') || 'Пт',
+      t('saturdayShort') || 'Сб'
+    ];
+
     for (let i = 0; i < 7; i++) {
       const day = new Date(weekStart);
       day.setDate(weekStart.getDate() + i);
 
-      const dayOfWeek = day.toLocaleDateString('ru-RU', { weekday: 'short' }).charAt(0).toUpperCase();
+      const dayOfWeek = weekdayNames[day.getDay()];
       const dayOfMonth = day.getDate();
       const dateString = day.toISOString().split('T')[0];
       const hasTasks = tasks[dateString] && tasks[dateString].length > 0;
@@ -363,12 +402,60 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
         >
           <div className="week-day-name">{dayOfWeek}</div>
           <div className={`week-day-number ${isToday ? 'today-number' : ''}`}>{dayOfMonth}</div>
-          {hasTasks && <div className="task-indicator"></div>}
+          {hasTasks && <div className="task-indicator">{tasks[dateString].length}</div>}
         </div>
       );
     }
 
-    return days;
+    return (
+      <div className="custom-week-view-container">
+        <div className="week-view-grid">
+          {days}
+        </div>
+        <div className="week-tasks-container">
+          {getDaysInWeek(date).map((day, index) => {
+            const dateString = day.toISOString().split('T')[0];
+            const dayTasks = tasks[dateString] || [];
+
+            return (
+              <div key={index} className="week-day-tasks-section">
+                <div className="week-day-header">
+                  <div className="week-day-name-full">{getWeekdayName(day)}</div>
+                  <div className="week-day-date">{day.getDate()} {getMonthName(day)}</div>
+                </div>
+
+                {dayTasks.length === 0 ? (
+                  <p className="no-tasks-text">{t('noTasksForDay')}</p>
+                ) : (
+                  <ul className="week-tasks-list">
+                    {dayTasks.map(task => (
+                      <li key={task.id} className={`task-item ${task.type} ${task.completed ? 'completed' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => toggleTaskCompletion(dateString, task.id)}
+                        />
+                        <span className="task-text">{task.text}</span>
+                        <button
+                          className="delete-task-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(dateString, task.id);
+                          }}
+                          title={t('delete')}
+                        >
+                          🗑️
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   // Кастомный тайлер для отображения дней с задачами и выделения будней
