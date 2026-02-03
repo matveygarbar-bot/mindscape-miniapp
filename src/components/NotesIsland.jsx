@@ -1,7 +1,11 @@
+import { useTranslation } from '../hooks/useTranslation';
+
 export default function NotesIsland({ notes, activeId, onSelect, setShowArchive, addNotification }) {
+  const { t } = useTranslation();
+
   return (
     <div className="island">
-      <div className="island-title">История мыслей</div>
+      <div className="island-title">{t('thoughtHistory')}</div>
       {notes.map(note => (
         <div
           key={note.id}
@@ -12,7 +16,7 @@ export default function NotesIsland({ notes, activeId, onSelect, setShowArchive,
         </div>
       ))}
       <button className="archive-button-thoughts" onClick={() => setShowArchive(true)}>
-        Архив
+        {t('archive')}
       </button>
     </div>
   );

@@ -1,47 +1,220 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css'; // Стили по умолчанию для react-calendar
 
-function CalendarSection({ isPremium, addNotification }) {
+function CalendarSection({ isPremium, addNotification, animationClass, language }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(new Date());
-  const [tasks, setTasks] = useState({}); // { 'YYYY-MM-DD': [{ id: 1, text: 'Задача' }] }
+  const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem('calendarTasks');
+    return savedTasks ? JSON.parse(savedTasks) : {};
+  }); // { 'YYYY-MM-DD': [{ id: 1, text: 'Задача' }] }
   const [newTask, setNewTask] = useState('');
-  const [newReminder, setNewReminder] = useState('');
-  const [newReminderTime, setNewReminderTime] = useState('');
-  const [newReminderRepeat, setNewReminderRepeat] = useState('no'); // 'no', 'daily', 'weekly', 'monthly'
+  const [view, setView] = useState('month'); // 'month', 'week'
 
-  // Проверка напоминаний каждую минуту
+  // Функция для получения текущей недели (понедельник текущей недели)
+  const getCurrentWeekStart = () => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понедельник текущей недели
+    return new Date(d.setDate(diff));
+  };
+
+  // Функция для получения дня недели в винительном падеже
+  const getCorrectWeekday = (date) => {
+    const weekdays = {
+      0: t('sunday'), // Воскресенье в винительном падеже
+      1: t('monday'), // Понедельник в винительном падеже
+      2: t('tuesday'),     // Вторник в винительном падеже
+      3: t('wednesday'),       // Среда в винительном падеже
+      4: t('thursday'),     // Четверг в винительном падеже
+      5: t('friday'),     // Пятница в винительном падеже
+      6: t('saturday')      // Суббота в винительном падеже
+    };
+
+    const dayIndex = date.getDay();
+    return weekdays[dayIndex];
+  };
+
+  // Функция для получения месяца в родительном падеже
+  const getCorrectMonth = (date) => {
+    const months = {
+      0: t('january'),
+      1: t('february'),
+      2: t('march'),
+      3: t('april'),
+      4: t('may'),
+      5: t('june'),
+      6: t('july'),
+      7: t('august'),
+      8: t('september'),
+      9: t('october'),
+      10: t('november'),
+      11: t('december')
+    };
+
+    const monthIndex = date.getMonth();
+    return months[monthIndex];
+  };
+
+  // Функция для получения названия месяца для заголовка календаря
+  const getMonthName = (date) => {
+    const months = {
+      0: t('january'),
+      1: t('february'),
+      2: t('march'),
+      3: t('april'),
+      4: t('may'),
+      5: t('june'),
+      6: t('july'),
+      7: t('august'),
+      8: t('september'),
+      9: t('october'),
+      10: t('november'),
+      11: t('december')
+    };
+
+    const monthIndex = date.getMonth();
+    return months[monthIndex];
+  };
+
+  // Функция для отображения месяца и года
+  const getMonthYearDisplay = (date) => {
+    return `${getMonthName(date)} ${date.getFullYear()}`;
+  };
+
+  // Функция для обновления месяца
+  const handleMonthChange = (monthIndex) => {
+    const newDate = new Date(date.getFullYear(), monthIndex, date.getDate());
+    // Убедимся, что день месяца действителен для нового месяца
+    const maxDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate();
+    newDate.setDate(Math.min(date.getDate(), maxDay));
+    setDate(newDate);
+  };
+
+  // Функция для обновления года
+  const handleYearChange = (yearValue) => {
+    const newDate = new Date(yearValue, date.getMonth(), date.getDate());
+    // Убедимся, что день месяца действителен для нового месяца
+    const maxDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate();
+    newDate.setDate(Math.min(date.getDate(), maxDay));
+    setDate(newDate);
+  };
+
+  // Компонент для выбора месяца и года (iOS-style picker)
+  const MonthYearPicker = () => {
+    const currentYear = date.getFullYear();
+    const startYear = currentYear - 10;
+    const endYear = currentYear + 10;
+
+    const months = [
+      t('january'),
+      t('february'),
+      t('march'),
+      t('april'),
+      t('may'),
+      t('june'),
+      t('july'),
+      t('august'),
+      t('september'),
+      t('october'),
+      t('november'),
+      t('december')
+    ];
+
+    const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
+
+    // State for selected values
+    const [selectedMonth, setSelectedMonth] = useState(date.getMonth());
+    const [selectedYear, setSelectedYear] = useState(date.getFullYear());
+
+    // Handlers for when selection changes
+    const handleMonthSelect = (monthIndex) => {
+      setSelectedMonth(monthIndex);
+    };
+
+    const handleYearSelect = (yearValue) => {
+      setSelectedYear(yearValue);
+    };
+
+    // Apply the selection
+    const applySelection = () => {
+      const newDate = new Date(selectedYear, selectedMonth, date.getDate());
+      // Ensure the day is valid for the selected month
+      const maxDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate();
+      newDate.setDate(Math.min(date.getDate(), maxDay));
+      setDate(newDate);
+      setShowMonthYearPicker(false);
+    };
+
+    // Cancel without applying changes
+    const cancelSelection = () => {
+      setShowMonthYearPicker(false);
+    };
+
+    return (
+      <div className="month-year-picker-ios-overlay">
+        <div className="month-year-picker-ios-backdrop" onClick={cancelSelection}></div>
+        <div className="month-year-picker-ios">
+          <div className="picker-ios-header">
+            <button className="picker-ios-cancel-btn" onClick={cancelSelection}>
+              {t('cancel')}
+            </button>
+            <button className="picker-ios-done-btn" onClick={applySelection}>
+              {t('done')}
+            </button>
+          </div>
+
+          <div className="picker-ios-body">
+            <div className="picker-wheel-container">
+              <div className="picker-wheel-label">{t('month')}</div>
+              <div className="picker-wheel">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => handleMonthSelect(parseInt(e.target.value))}
+                  className="wheel-select"
+                >
+                  {months.map((month, index) => (
+                    <option key={month} value={index}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="picker-wheel-container">
+              <div className="picker-wheel-label">{t('year')}</div>
+              <div className="picker-wheel">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => handleYearSelect(parseInt(e.target.value))}
+                  className="wheel-select"
+                >
+                  {years.map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button className="picker-center-close-btn" onClick={cancelSelection}>
+            {t('back')}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Сохраняем задачи в localStorage при их изменении
   useEffect(() => {
-    const checkReminders = () => {
-      const now = new Date();
-      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-      const currentDate = now.toISOString().split('T')[0];
-
-      // Проверяем все задачи на всех датах
-      Object.keys(tasks).forEach(dateString => {
-        tasks[dateString].forEach(task => {
-          if (task.type === 'reminder' && task.time === currentTime && dateString === currentDate) {
-            if (addNotification) {
-              addNotification('Напоминание', task.text, 'info');
-            } else {
-              alert(`Напоминание: ${task.text}`);
-            }
-          }
-        });
-      });
-    };
-
-    // Проверяем напоминания каждую минуту
-    const reminderInterval = setInterval(checkReminders, 60000);
-
-    // Проверяем напоминания сразу при загрузке
-    checkReminders();
-
-    return () => {
-      clearInterval(reminderInterval);
-    };
-  }, [tasks, addNotification]);
-  const [view, setView] = useState('month'); // 'month', 'week', 'day'
+    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   const handleDateChange = (newDate) => {
     // Ограничение на 7 дней вперед для Free-версии
@@ -49,11 +222,31 @@ function CalendarSection({ isPremium, addNotification }) {
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
       if (newDate > sevenDaysFromNow) {
-        alert('В Free-версии можно планировать только на 7 дней вперед.');
+        alert(t('freeVersionLimit'));
         return;
       }
     }
+    // Немедленно устанавливаем дату без задержки
     setDate(newDate);
+  };
+
+  // Function to add task to Today section
+  const addToTodayTask = (task) => {
+    const todayTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+    // Check if task already exists in today's tasks to avoid duplicates
+    const taskExists = todayTasks.some(todayTask => todayTask.id === task.id);
+    if (!taskExists) {
+      todayTasks.push({
+        id: task.id,
+        text: task.text,
+        completed: false,
+        createdAt: task.createdAt,
+        createdAtFull: task.createdAtFull
+      });
+
+      localStorage.setItem('tasks', JSON.stringify(todayTasks));
+    }
   };
 
   const handleAddTask = () => {
@@ -63,80 +256,34 @@ function CalendarSection({ isPremium, addNotification }) {
         id: Date.now(),
         text: newTask.trim(),
         type: 'task',
-        completed: false
+        completed: false,
+        createdAt: dateString, // Дата создания
+        createdAtFull: new Date().toISOString()
       };
       setTasks(prevTasks => ({
         ...prevTasks,
         [dateString]: [...(prevTasks[dateString] || []), task]
       }));
+
+      // Also add the task to the Today section if it's for today
+      if (dateString === new Date().toISOString().split('T')[0]) {
+        addToTodayTask(task);
+      }
+
       setNewTask('');
     }
   };
 
-  const handleAddReminder = async () => {
-    const dateString = date.toISOString().split('T')[0]; // Формат YYYY-MM-DD
-    if (newReminder.trim() && newReminderTime && dateString) {
-      const reminder = {
-        id: Date.now(),
-        text: newReminder.trim(),
-        time: newReminderTime,
-        repeat: newReminderRepeat,
-        type: 'reminder'
-      };
 
-      setTasks(prevTasks => ({
-        ...prevTasks,
-        [dateString]: [...(prevTasks[dateString] || []), reminder]
-      }));
-      setNewReminder('');
-      setNewReminderTime('');
-      setNewReminderRepeat('no');
 
-      // Отправляем напоминание на сервер для регистрации
-      try {
-        // Получаем ID пользователя из Telegram WebApp
-        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-        if (!userId) {
-          // Если ID пользователя недоступен, показываем предупреждение
-          if (addNotification) {
-            addNotification('Внимание', 'Напоминание сохранено локально. Для отправки в бот откройте приложение через Telegram.', 'warning');
-          }
-          // Добавляем напоминание только локально
-          return;
-        }
-
-        const response = await fetch('http://localhost:3000/reminders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: userId,
-            message: newReminder.trim(),
-            time: newReminderTime,
-            date: dateString,
-            repeat: newReminderRepeat
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (addNotification) {
-            addNotification('Напоминание', 'Напоминание зарегистрировано и будет отправлено в бот', 'success');
-          }
-        } else {
-          console.error('Ошибка при сохранении напоминания на сервере:', await response.text());
-          if (addNotification) {
-            addNotification('Ошибка', 'Не удалось зарегистрировать напоминание', 'error');
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при отправке напоминания:', error);
-        if (addNotification) {
-          addNotification('Ошибка', 'Не удалось подключиться к серверу напоминаний', 'error');
-        }
-      }
+  // Function to delete task from Today section
+  const deleteFromTodayTask = (taskId, dateString) => {
+    // Only delete from Today if the task was for today
+    if (dateString === new Date().toISOString().split('T')[0]) {
+      const todayTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+      const filteredTasks = todayTasks.filter(task => task.id !== taskId);
+      localStorage.setItem('tasks', JSON.stringify(filteredTasks));
     }
   };
 
@@ -145,6 +292,23 @@ function CalendarSection({ isPremium, addNotification }) {
       ...prevTasks,
       [dateString]: prevTasks[dateString].filter(task => task.id !== taskId)
     }));
+
+    // Also delete the task from Today section if it exists there
+    deleteFromTodayTask(taskId, dateString);
+  };
+
+
+
+  // Function to update task completion status in Today section
+  const updateTodayTaskCompletion = (taskId, completed, dateString) => {
+    // Only update Today if the task was for today
+    if (dateString === new Date().toISOString().split('T')[0]) {
+      const todayTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+      const updatedTasks = todayTasks.map(task =>
+        task.id === taskId ? { ...task, completed, completedAt: completed ? new Date().toISOString().split('T')[0] : task.completedAt } : task
+      );
+      localStorage.setItem('tasks', JSON.stringify(updatedTasks));
+    }
   };
 
   const toggleTaskCompletion = (dateString, taskId) => {
@@ -152,11 +316,20 @@ function CalendarSection({ isPremium, addNotification }) {
       ...prevTasks,
       [dateString]: prevTasks[dateString].map(task =>
         task.id === taskId && task.type === 'task'
-          ? { ...task, completed: !task.completed }
+          ? {
+              ...task,
+              completed: !task.completed,
+              completedAt: !task.completed ? new Date().toISOString().split('T')[0] : task.completedAt
+            }
           : task
       )
     }));
+
+    // Also update the task in Today section if it exists there
+    updateTodayTaskCompletion(taskId, !tasks[dateString]?.find(t => t.id === taskId)?.completed, dateString);
   };
+
+
 
   const dateString = date.toISOString().split('T')[0];
   const tasksForSelectedDate = tasks[dateString] || [];
@@ -167,137 +340,162 @@ function CalendarSection({ isPremium, addNotification }) {
     return tasks[dateString] && tasks[dateString].length > 0;
   };
 
-  // Кастомный тайлер для отображения дней с задачами
-  const tileClassName = ({ date, view }) => {
-    if (view === 'month' && hasTasksForDate(date)) {
-      return 'calendar-day-with-tasks';
+  // Функция для отображения недели
+  const renderWeekView = () => {
+    const weekStart = getCurrentWeekStart();
+    const days = [];
+
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+
+      const dayOfWeek = day.toLocaleDateString('ru-RU', { weekday: 'short' }).charAt(0).toUpperCase();
+      const dayOfMonth = day.getDate();
+      const dateString = day.toISOString().split('T')[0];
+      const hasTasks = tasks[dateString] && tasks[dateString].length > 0;
+      const isToday = day.toDateString() === new Date().toDateString();
+
+      days.push(
+        <div
+          key={i}
+          className={`week-day ${isToday ? 'today' : ''} ${hasTasks ? 'has-tasks' : ''}`}
+          onClick={() => setDate(day)}
+        >
+          <div className="week-day-name">{dayOfWeek}</div>
+          <div className={`week-day-number ${isToday ? 'today-number' : ''}`}>{dayOfMonth}</div>
+          {hasTasks && <div className="task-indicator"></div>}
+        </div>
+      );
     }
+
+    return days;
+  };
+
+  // Кастомный тайлер для отображения дней с задачами и выделения будней
+  const tileClassName = ({ date, view }) => {
+    const classes = [];
+
+    // Проверяем, находится ли день в текущей неделе
+    const currentWeekStart = getCurrentWeekStart();
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+
+    if (view === 'week' && date >= currentWeekStart && date <= currentWeekEnd) {
+      classes.push('current-week-day');
+    }
+
+    if (view === 'month' && hasTasksForDate(date)) {
+      classes.push('calendar-day-with-tasks');
+    }
+
+    // Определяем, является ли день будним (понедельник-пятница)
+    const dayOfWeek = date.getDay(); // 0 - воскресенье, 1 - понедельник, ..., 6 - суббота
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Понедельник-пятница
+      classes.push('weekday');
+    }
+
+    return classes.join(' ');
   };
 
   return (
-    <div className="section-content">
+    <div className={`section-with-sticky-header ${animationClass || ''}`} style={{height: 'calc(100vh - 64px - 68px)'}}>
       <div className="section-header">
         <img src="https://image2url.com/r2/bucket2/images/1767882523704-04e18a2f-2f0d-4a00-976e-b8da71e68fdc.png" alt="App Logo" className="app-logo" />
-        <h1>Календарь</h1>
+        <h1>{t('calendar')}</h1>
         <span className={`premium-status ${isPremium ? 'premium' : 'free'}`}>
-          {isPremium ? 'Premium' : 'Free'}
+          {isPremium ? t('premium') : t('free')}
         </span>
       </div>
+      <div className="section-content">
 
       <div className="calendar-container">
         <div className="calendar-controls">
           <button
             className={view === 'month' ? 'active-view' : ''}
-            onClick={() => setView('month')}
+            onClick={() => {
+              setView('month');
+            }}
           >
-            Месяц
+            {t('month')}
           </button>
           <button
             className={view === 'week' ? 'active-view' : ''}
-            onClick={() => setView('week')}
+            onClick={() => {
+              setView('week');
+              setDate(getCurrentWeekStart());
+            }}
           >
-            Неделя
-          </button>
-          <button
-            className={view === 'day' ? 'active-view' : ''}
-            onClick={() => setView('day')}
-          >
-            День
+            {t('week')}
           </button>
         </div>
 
-        <Calendar
-          onChange={handleDateChange}
-          value={date}
-          className="react-calendar-custom"
-          tileClassName={tileClassName}
-          showNeighboringMonth={false}
-          next2Label={null}
-          prev2Label={null}
-        />
+        {view === 'week' ? (
+          <div className="custom-week-view">
+            {renderWeekView()}
+          </div>
+        ) : (
+          <div className="calendar-header">
+            <Calendar
+              onChange={handleDateChange}
+              value={date}
+              className="react-calendar-custom"
+              tileClassName={tileClassName}
+              showNeighboringMonth={false}
+              nextLabel={null}
+              prevLabel={null}
+              next2Label={null}
+              prev2Label={null}
+              showNavigation={false} /* Completely hide the navigation bar */
+              view={view}
+              minDetail="month"
+              maxDetail="month"
+              navigationLabel={() => null} // Hide the default navigation
+              formatDay={(locale, date) => date.toLocaleDateString(language, { day: 'numeric' })}
+            />
+            <button
+              className="month-year-button"
+              onClick={() => setShowMonthYearPicker(true)}
+            >
+              {getMonthYearDisplay(date)}
+            </button>
+          </div>
+        )}
+
 
         <div className="tasks-for-date">
-          <h2>Задачи на {date.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+          <h2>{t('tasksForDate')} {getCorrectWeekday(date)} {date.getDate()} {getCorrectMonth(date)} {date.getFullYear()}</h2>
 
           {/* Форма для добавления задачи */}
           <div className="add-task-form">
             <input
               type="text"
-              placeholder="Добавить новую задачу"
+              placeholder={t('newTaskName')}
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
             />
-            <button onClick={handleAddTask}>Добавить</button>
+          </div>
+          <div className="add-task-button-container">
+            <button onClick={handleAddTask}>{t('add')}</button>
           </div>
 
-          {/* Форма для добавления напоминания */}
-          <div className="add-reminder-form">
-            <div className="reminder-input-group">
-              <input
-                type="text"
-                placeholder="Добавить напоминание"
-                value={newReminder}
-                onChange={(e) => setNewReminder(e.target.value)}
-              />
-              <div className="time-and-repeat-small">
-                <div className="time-selector-small">
-                  <label htmlFor="calendar-reminder-time">Время:</label>
-                  <input
-                    id="calendar-reminder-time"
-                    type="time"
-                    value={newReminderTime}
-                    onChange={(e) => setNewReminderTime(e.target.value)}
-                  />
-                </div>
-                <div className="repeat-selector-small">
-                  <label htmlFor="calendar-reminder-repeat">Повтор:</label>
-                  <select
-                    id="calendar-reminder-repeat"
-                    value={newReminderRepeat}
-                    onChange={(e) => setNewReminderRepeat(e.target.value)}
-                  >
-                    <option value="no">Без</option>
-                    <option value="daily">Д</option>
-                    <option value="weekly">Н</option>
-                    <option value="monthly">М</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <button onClick={handleAddReminder}>Напомнить</button>
-          </div>
 
           {tasksForSelectedDate.length === 0 ? (
-            <p>На этот день задач и напоминаний нет.</p>
+            <p>{t('noTasksForDay')}</p>
           ) : (
             <ul className="tasks-list">
               {tasksForSelectedDate.map(task => (
                 <li key={task.id} className={`task-item ${task.type} ${task.completed ? 'completed' : ''}`}>
-                  {task.type === 'task' ? (
-                    <>
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => toggleTaskCompletion(dateString, task.id)}
-                      />
-                      <span className="task-text">{task.text}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="reminder-icon">⏰</span>
-                      <div className="reminder-details">
-                        <span className="task-text">{task.text} в {task.time}</span>
-                        {task.repeat !== 'no' && (
-                          <span className="repeat-indicator">🔄 {task.repeat === 'daily' ? 'ежедн.' : task.repeat === 'weekly' ? 'еженед.' : 'ежемес.'}</span>
-                        )}
-                      </div>
-                    </>
-                  )}
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => toggleTaskCompletion(dateString, task.id)}
+                  />
+                  <span className="task-text">{task.text}</span>
                   <button
                     className="delete-task-btn"
                     onClick={() => handleDeleteTask(dateString, task.id)}
-                    title="Удалить"
+                    title={t('delete')}
                   >
                     🗑️
                   </button>
@@ -307,7 +505,10 @@ function CalendarSection({ isPremium, addNotification }) {
           )}
         </div>
       </div>
+
+      {showMonthYearPicker && <MonthYearPicker />}
     </div>
+  </div>
   );
 }
 

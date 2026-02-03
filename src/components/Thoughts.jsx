@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import NotesIsland from './NotesIsland';
 import NoteEditor from './NoteEditor';
 import Archive from './Archive';
@@ -17,16 +18,20 @@ function Thoughts({
   showArchive,
   setShowArchive,
   addNotification,
+  animationClass
 }) {
+  const { t } = useTranslation();
+
   return (
-    <div className="section-content thoughts-layout"> {/* Добавил thoughts-layout для Flexbox */}
+    <div className={`section-with-sticky-header ${animationClass || ''}`} style={{height: 'calc(100vh - 64px - 68px)'}}>
       <div className="section-header">
         <img src="https://image2url.com/r2/bucket2/images/1767882523704-04e18a2f-2f0d-4a00-976e-b8da71e68fdc.png" alt="App Logo" className="app-logo" />
-        <h1>Мысли</h1>
+        <h1>{t('thoughts')}</h1>
         <span className={`premium-status ${isPremium ? 'premium' : 'free'}`}>
-          {isPremium ? 'Premium' : 'Free'}
+          {isPremium ? t('premium') : t('free')}
         </span>
       </div>
+      <div className="section-content thoughts-layout"> {/* Добавил thoughts-layout для Flexbox */}
 
       {showArchive ? (
         <Archive
@@ -66,6 +71,7 @@ function Thoughts({
         </>
       )}
     </div>
+  </div>
   );
 }
 

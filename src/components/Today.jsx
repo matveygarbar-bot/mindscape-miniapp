@@ -1,146 +1,201 @@
 import React, { useState, useEffect } from 'react';
-import TelegramNotifier from './TelegramNotifier';
+import { useTranslation } from '../hooks/useTranslation';
+import ReminderForm from './ReminderForm';
 
-function Today({ isPremium, addNotification }) { // Принимаем isPremium и addNotification
-  const [reminders, setReminders] = useState(() => {
-    const savedReminders = localStorage.getItem('reminders');
-    return savedReminders ? JSON.parse(savedReminders) : [];
-  });
-  const [newReminderTitle, setNewReminderTitle] = useState('');
-  const [newReminderTime, setNewReminderTime] = useState('');
-  const [newReminderRepeat, setNewReminderRepeat] = useState('no'); // 'no', 'daily', 'weekly', 'monthly'
-  const [focusTime, setFocusTime] = useState(0); // Время в секундах для фокус-таймера
-  const [isActive, setIsActive] = useState(false); // Активен ли фокус-таймер
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
+function Today({ isPremium, addNotification, animationClass, focusTime, isFocusActive, startFocusTimer, stopFocusTimer, formatTime }) { // Принимаем isPremium, addNotification и animationClass
+  const { t } = useTranslation();
 
-  useEffect(() => {
-    let interval = null;
-    if (isActive && focusTime > 0) {
-      interval = setInterval(() => {
-        setFocusTime(prevTime => prevTime - 1);
-      }, 1000);
-    } else if (focusTime === 0) {
-      if (interval) clearInterval(interval);
-      // Показываем уведомление о завершении таймера
-      if (isActive) {
-        if (addNotification) {
-          addNotification('Фокус-таймер', 'Время вышло! Пора сделать перерыв.', 'success');
-        } else {
-          alert('Фокус-таймер завершен!');
-        }
-        setIsActive(false);
-      }
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isActive, focusTime, addNotification]);
+  // Используем переданные значения таймера вместо локального состояния
+  // const [focusTime, setFocusTime] = useState(0); // Время в секундах для фокус-таймера
+  // const [isActive, setIsActive] = useState(false); // Активен ли фокус-таймер
 
-  // Сохраняем напоминания в localStorage при их изменении
-  useEffect(() => {
-    localStorage.setItem('reminders', JSON.stringify(reminders));
-  }, [reminders]);
-
-  const handleAddReminder = async () => {
-    if (newReminderTitle && newReminderTime) {
-      // Получаем дату из поля ввода или используем сегодняшнюю, если не указана
-      const selectedDate = document.getElementById('reminder-date')?.value || new Date().toISOString().split('T')[0];
-
-      const reminder = {
-        id: Date.now(),
-        title: newReminderTitle,
-        time: newReminderTime,
-        repeat: newReminderRepeat,
-        date: selectedDate, // используем выбранную дату
-        createdAt: new Date().toISOString()
-      };
-
-      // Добавляем напоминание в локальный список
-      setReminders(prevReminders => [...prevReminders, reminder]);
-      setNewReminderTitle('');
-      setNewReminderTime('');
-      setNewReminderRepeat('no');
-
-      // Отправляем напоминание на сервер для регистрации
-      try {
-        // Получаем ID пользователя из Telegram WebApp
-        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-
-        if (!userId) {
-          // Если ID пользователя недоступен, показываем предупреждение
-          if (addNotification) {
-            addNotification('Внимание', 'Напоминание сохранено локально. Для отправки в бот откройте приложение через Telegram.', 'warning');
-          }
-          // Добавляем напоминание только локально
-          return;
-        }
-
-        console.log('Отправляем напоминание на сервер:', {
-          userId: userId,
-          message: newReminderTitle,
-          time: newReminderTime,
-          date: selectedDate,
-          repeat: newReminderRepeat
-        });
-
-        const response = await fetch('http://localhost:3001/reminders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: userId,
-            message: newReminderTitle,
-            time: newReminderTime,
-            date: selectedDate,
-            repeat: newReminderRepeat
-          })
-        });
-
-        console.log('Ответ от сервера:', response.status);
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('Напоминание успешно зарегистрировано:', result);
-          if (addNotification) {
-            addNotification('Напоминание', 'Напоминание зарегистрировано и будет отправлено в бот', 'success');
-          }
-        } else {
-          console.error('Ошибка при сохранении напоминания на сервере:', await response.text());
-          if (addNotification) {
-            addNotification('Ошибка', 'Не удалось зарегистрировать напоминание', 'error');
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при отправке напоминания:', error);
-        if (addNotification) {
-          addNotification('Ошибка', 'Не удалось подключиться к серверу напоминаний', 'error');
-        }
-      }
-    }
-  };
-
-  const handleDeleteReminder = (id) => {
-    const updatedReminders = reminders.filter(r => r.id !== id);
-    setReminders(updatedReminders);
-  };
-
-  const startFocusTimer = (duration) => {
-    setFocusTime(duration);
-    setIsActive(true);
-  };
-
-  const stopFocusTimer = () => {
-    setIsActive(false);
-    setFocusTime(0);
-  };
-
-  const formatTime = (seconds) => {
+  // Если formatTime не передан, используем локальную функцию
+  const localFormatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
+
+  const displayFormatTime = formatTime || localFormatTime;
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem('tasks');
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  });
+  const [newTask, setNewTask] = useState('');
+  const [showReminderForm, setShowReminderForm] = useState(false);
+  const [reminders, setReminders] = useState(() => {
+    const savedReminders = localStorage.getItem('reminders');
+    return savedReminders ? JSON.parse(savedReminders) : [];
+  });
+
+  // Сохраняем задачи в localStorage при их изменении
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  // Sync with calendar tasks for today's date
+  useEffect(() => {
+    const todayString = new Date().toISOString().split('T')[0];
+    const calendarTasks = JSON.parse(localStorage.getItem('calendarTasks') || '{}');
+    const todayCalendarTasks = calendarTasks[todayString] || [];
+
+    // Merge calendar tasks with today's tasks
+    setTasks(prevTasks => {
+      const updatedTasks = [...prevTasks];
+      todayCalendarTasks.forEach(calTask => {
+        const exists = updatedTasks.some(task => task.id === calTask.id);
+        if (!exists) {
+          updatedTasks.push({
+            id: calTask.id,
+            text: calTask.text,
+            completed: calTask.completed || false,
+            createdAt: calTask.createdAt || todayString,
+            createdAtFull: calTask.createdAtFull || new Date().toISOString(),
+            type: calTask.type || 'task'
+          });
+        }
+      });
+      return updatedTasks;
+    });
+  }, []);
+
+  // Функция для добавления напоминания
+  const handleAddReminder = (reminderData) => {
+    const newReminder = {
+      id: Date.now(),
+      ...reminderData,
+      createdAt: new Date().toISOString(),
+      notified: false
+    };
+
+    setReminders(prevReminders => [...prevReminders, newReminder]);
+    localStorage.setItem('reminders', JSON.stringify([...reminders, newReminder]));
+
+    // Показываем уведомление
+    addNotification(t('reminderAdded') || 'Напоминание добавлено', reminderData.message);
+
+    // Закрываем форму
+    setShowReminderForm(false);
+  };
+
+  // Функция для удаления напоминания
+  const deleteReminder = (id) => {
+    const updatedReminders = reminders.filter(reminder => reminder.id !== id);
+    setReminders(updatedReminders);
+    localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+  };
+
+  // Функция для проверки и отправки напоминаний
+  useEffect(() => {
+    const checkReminders = async () => {
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      const currentDate = now.toISOString().split('T')[0];
+
+      for (const reminder of reminders) {
+        if (!reminder.notified && reminder.time === currentTime && reminder.date === currentDate) {
+          // Отправляем напоминание в бота
+          try {
+            const userId = localStorage.getItem('userId') || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+
+            if (userId) {
+              const response = await fetch('https://legal-bugs-tease.loca.lt/reminders', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: parseInt(userId),
+                  message: reminder.message,
+                  time: reminder.time,
+                  date: reminder.date,
+                  repeat: reminder.repeat
+                }),
+              });
+
+              if (response.ok) {
+                // Успешно отправлено в бота
+                addNotification(t('reminderSentToBot') || 'Напоминание отправлено в бот', reminder.message);
+              } else {
+                // Если не удалось отправить в бота, показываем локальное уведомление
+                addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
+              }
+            } else {
+              // Если не удается получить userId, показываем локальное уведомление
+              addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
+            }
+          } catch (error) {
+            console.error('Error sending reminder to bot:', error);
+            // В случае ошибки показываем локальное уведомление
+            addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
+          }
+
+          // Отмечаем напоминание как отправленное
+          const updatedReminders = reminders.map(r =>
+            r.id === reminder.id ? {...r, notified: true} : r
+          );
+
+          // Если напоминание с повторением, создаем новое напоминание
+          if (reminder.repeat !== 'no') {
+            const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
+            const newReminder = {
+              ...reminder,
+              date: nextDate,
+              notified: false,
+              id: Date.now() + Math.random() // Новый ID для следующего напоминания
+            };
+
+            // Удаляем старое напоминание и добавляем новое
+            const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
+            const finalReminders = [...filteredReminders, newReminder];
+            setReminders(finalReminders);
+            localStorage.setItem('reminders', JSON.stringify(finalReminders));
+          } else {
+            // Если без повторения, просто обновляем статус
+            setReminders(updatedReminders);
+            localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+          }
+        }
+      }
+    };
+
+    // Проверяем напоминания каждую минуту
+    const interval = setInterval(checkReminders, 60000); // 60000 мс = 1 минута
+
+    // Очищаем интервал при размонтировании компонента
+    return () => clearInterval(interval);
+  }, [reminders, addNotification, t]);
+
+  // Функция для вычисления следующей даты повтора
+  const getNextRepeatDate = (currentDate, repeatType) => {
+    const date = new Date(currentDate);
+
+    switch (repeatType) {
+      case 'daily':
+        date.setDate(date.getDate() + 1);
+        break;
+      case 'weekly':
+        date.setDate(date.getDate() + 7);
+        break;
+      case 'monthly':
+        date.setMonth(date.getMonth() + 1);
+        break;
+      case 'yearly':
+        date.setFullYear(date.getFullYear() + 1);
+        break;
+      default:
+        return currentDate;
+    }
+
+    return date.toISOString().split('T')[0];
+  };
+
+  // Используем переданные функции из App.jsx
+  // const formatTime = (seconds) => {
+  //   const minutes = Math.floor(seconds / 60);
+  //   const remainingSeconds = seconds % 60;
+  //   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  // };
 
   const handleAddTask = () => {
     if (newTask.trim()) {
@@ -148,47 +203,122 @@ function Today({ isPremium, addNotification }) { // Принимаем isPremium
         id: Date.now(),
         text: newTask,
         completed: false,
-        createdAt: new Date()
+        createdAt: new Date().toISOString().split('T')[0], // Сохраняем дату в формате YYYY-MM-DD
+        createdAtFull: new Date().toISOString()
       };
       setTasks([...tasks, task]);
+
+      // Also add the task to the calendar for today
+      addToCalendarTask(task);
+
       setNewTask('');
+    }
+  };
+
+  // Function to add task to calendar
+  const addToCalendarTask = (task) => {
+    const dateString = task.createdAt; // Use the created date which is today
+    const calendarTasks = JSON.parse(localStorage.getItem('calendarTasks') || '{}');
+
+    if (!calendarTasks[dateString]) {
+      calendarTasks[dateString] = [];
+    }
+
+    // Check if task already exists in calendar to avoid duplicates
+    const taskExists = calendarTasks[dateString].some(calendarTask => calendarTask.id === task.id);
+    if (!taskExists) {
+      calendarTasks[dateString].push({
+        ...task,
+        type: 'task'
+      });
+
+      localStorage.setItem('calendarTasks', JSON.stringify(calendarTasks));
     }
   };
 
   const toggleTaskCompletion = (id) => {
     setTasks(tasks.map(task =>
-      task.id === id ? { ...task, completed: !task.completed } : task
+      task.id === id ? {
+        ...task,
+        completed: !task.completed,
+        completedAt: !task.completed ? new Date().toISOString().split('T')[0] : task.completedAt // Сохраняем дату выполнения
+      } : task
     ));
+
+    // Also update the task in calendar
+    updateCalendarTask(id, !tasks.find(t => t.id === id)?.completed);
+  };
+
+  // Function to update task completion status in calendar
+  const updateCalendarTask = (taskId, completed) => {
+    const calendarTasks = JSON.parse(localStorage.getItem('calendarTasks') || '{}');
+
+    for (const date in calendarTasks) {
+      const taskIndex = calendarTasks[date].findIndex(task => task.id === taskId);
+      if (taskIndex !== -1) {
+        calendarTasks[date][taskIndex].completed = completed;
+        if (completed) {
+          calendarTasks[date][taskIndex].completedAt = new Date().toISOString().split('T')[0];
+        }
+        break;
+      }
+    }
+
+    localStorage.setItem('calendarTasks', JSON.stringify(calendarTasks));
   };
 
   const deleteTask = (id) => {
     setTasks(tasks.filter(task => task.id !== id));
+
+    // Also delete the task from calendar
+    deleteCalendarTask(id);
+  };
+
+  // Function to delete task from calendar
+  const deleteCalendarTask = (taskId) => {
+    const calendarTasks = JSON.parse(localStorage.getItem('calendarTasks') || '{}');
+
+    for (const date in calendarTasks) {
+      calendarTasks[date] = calendarTasks[date].filter(task => task.id !== taskId);
+      // Clean up empty dates
+      if (calendarTasks[date].length === 0) {
+        delete calendarTasks[date];
+      }
+    }
+
+    localStorage.setItem('calendarTasks', JSON.stringify(calendarTasks));
   };
 
   return (
-    <div className="section-content">
+    <div className={`section-with-sticky-header ${animationClass || ''}`} style={{height: 'calc(100vh - 64px - 68px)'}}>
       <div className="section-header">
         <img src="https://image2url.com/r2/bucket2/images/1767882523704-04e18a2f-2f0d-4a00-976e-b8da71e68fdc.png" alt="App Logo" className="app-logo" />
-        <h1>Сегодня</h1>
+        <h1>{t('today')}</h1>
         <span className={`premium-status ${isPremium ? 'premium' : 'free'}`}>
-          {isPremium ? 'Premium' : 'Free'}
+          {isPremium ? t('premium') : t('free')}
         </span>
       </div>
+      <div className="section-content">
 
       <div className="today-section">
-        <h2>Текущие задачи</h2>
+        <h2>{t('currentTasks')}</h2>
         <div className="add-task-form">
-          <input
-            type="text"
-            placeholder="Добавить новую задачу"
+          <textarea
+            placeholder={t('addNewTask').replace(/\n/g, '\n')}
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAddTask();
+              }
+            }}
+            rows="2"
           />
           <button className="add-task-btn" onClick={handleAddTask}>+</button>
         </div>
         {tasks.length === 0 ? (
-          <p>Задач пока нет.</p>
+          <p>{t('noTasksYet')}</p>
         ) : (
           <ul className="tasks-list">
             {tasks.map(task => (
@@ -202,7 +332,7 @@ function Today({ isPremium, addNotification }) { // Принимаем isPremium
                 <button
                   className="delete-task-btn"
                   onClick={() => deleteTask(task.id)}
-                  title="Удалить задачу"
+                  title={t('delete')}
                 >
                   🗑️
                 </button>
@@ -213,94 +343,76 @@ function Today({ isPremium, addNotification }) { // Принимаем isPremium
       </div>
 
       <div className="today-section">
-        <h2>Фокус-таймер</h2>
+        <div className="section-header-with-button">
+          <h2>{t('reminders') || 'Напоминания'}</h2>
+          <button
+            className="add-reminder-btn"
+            onClick={() => setShowReminderForm(true)}
+            title={t('addNewReminder') || 'Добавить напоминание'}
+          >
+            +
+          </button>
+        </div>
+
+        {reminders.length === 0 ? (
+          <p>{t('noRemindersYet') || 'Напоминаний пока нет.'}</p>
+        ) : (
+          <ul className="reminders-list">
+            {reminders.map(reminder => (
+              <li key={reminder.id} className="reminder-item">
+                <div className="reminder-content">
+                  <div className="reminder-message">{reminder.message}</div>
+                  <div className="reminder-time-info">
+                    <span className="reminder-date">{reminder.date}</span>
+                    <span className="reminder-time">{reminder.time}</span>
+                  </div>
+                  {reminder.repeat !== 'no' && (
+                    <div className="reminder-repeat">
+                      {reminder.repeat === 'daily' && t('daily') || 'Каждый день'}
+                      {reminder.repeat === 'weekly' && t('weekly') || 'Каждую неделю'}
+                      {reminder.repeat === 'monthly' && t('monthly') || 'Каждый месяц'}
+                      {reminder.repeat === 'yearly' && t('yearly') || 'Каждый год'}
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="delete-reminder-btn"
+                  onClick={() => deleteReminder(reminder.id)}
+                  title={t('delete')}
+                >
+                  🗑️
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="today-section">
+        <h2>{t('focusTimer')}</h2>
         <div className="focus-timer">
-          <div className="timer-display">{formatTime(focusTime)}</div>
+          <div className="timer-display">{displayFormatTime(focusTime)}</div>
           <div className="timer-controls">
-            {!isActive ? (
+            {!isFocusActive ? (
               <>
-                <button onClick={() => startFocusTimer(25 * 60)}>25 мин</button>
-                <button onClick={() => startFocusTimer(5 * 60)}>5 мин</button>
+                <button onClick={() => startFocusTimer(25 * 60)}>{t('twentyFiveMinutes')}</button>
+                <button onClick={() => startFocusTimer(5 * 60)}>{t('fiveMinutes')}</button>
               </>
             ) : (
-              <button onClick={stopFocusTimer}>Стоп</button>
+              <button onClick={stopFocusTimer}>{t('stop')}</button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="today-section">
-        <h2>Напоминания</h2>
-        <div className="reminder-form">
-          <input
-            type="text"
-            placeholder="Название напоминания"
-            value={newReminderTitle}
-            onChange={(e) => setNewReminderTitle(e.target.value)}
-          />
-          <div className="time-and-repeat">
-            <div className="date-selector">
-              <label htmlFor="reminder-date">Дата:</label>
-              <input
-                id="reminder-date"
-                type="date"
-                defaultValue={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div className="time-selector">
-              <label htmlFor="reminder-time">Время:</label>
-              <input
-                id="reminder-time"
-                type="time"
-                value={newReminderTime}
-                onChange={(e) => setNewReminderTime(e.target.value)}
-              />
-            </div>
-            <div className="repeat-selector">
-              <label htmlFor="reminder-repeat">Повтор:</label>
-              <select
-                id="reminder-repeat"
-                value={newReminderRepeat}
-                onChange={(e) => setNewReminderRepeat(e.target.value)}
-              >
-                <option value="no">Без повтора</option>
-                <option value="daily">Ежедневно</option>
-                <option value="weekly">Еженедельно</option>
-                <option value="monthly">Ежемесячно</option>
-              </select>
-            </div>
-          </div>
-          <button onClick={handleAddReminder}>Добавить напоминание</button>
-        </div>
-        <div className="reminder-list">
-          {reminders.length === 0 ? (
-            <p>Напоминаний пока нет.</p>
-          ) : (
-            <ul>
-              {reminders.map(r => (
-                <li key={r.id}>
-                  <div className="reminder-info">
-                    <span>{r.title} в {r.time}</span>
-                    {r.repeat !== 'no' && (
-                      <span className="repeat-indicator">🔄 {r.repeat === 'daily' ? 'ежедн.' : r.repeat === 'weekly' ? 'еженед.' : 'ежемес.'}</span>
-                    )}
-                  </div>
-                  <button
-                    className="delete-reminder-btn"
-                    onClick={() => handleDeleteReminder(r.id)}
-                    title="Удалить напоминание"
-                  >
-                    🗑️
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <TelegramNotifier isPremium={isPremium} />
+      {showReminderForm && (
+        <ReminderForm
+          onAddReminder={handleAddReminder}
+          onCancel={() => setShowReminderForm(false)}
+        />
+      )}
     </div>
+  </div>
   );
 }
 

@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const TOKEN = '8548864078:AAEIchZ_NQ5zN-Np1RleJbPYMk1-vzXk0Ag';
+const TOKEN = '7975436192:AAERWNu43TbK_cpH-SE1v41fsHReNEZtBh8';
 const CHANNEL_ID = -1002924310370;
 const CHANNEL_URL = 'https://t.me/MindScape_app';
 const bot = new TelegramBot(TOKEN, { polling: true });
@@ -310,13 +310,13 @@ bot.on('callback_query', async (q) => {
 
       await sendAndSave(
         chatId,
-        `✅ Отлично!\nПодписка подтверждена.\n\nВыберите версию:\n(подробнее о каждой версии можно узнать в нашем <a href="https://t.me/MindScape_app/10">канале</a> 😉)`,
+        `✅ Отлично!\nПодписка подтверждена.\n\nВыберите версию:\n(подробнее о каждой версии можно узнать в нашем <a href="https://t.me/MindScape_app/12">канале</a> 😉)`,
         {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🆓 Бесплатная версия', callback_data: 'free' }],
-              [{ text: '⭐ Полная версия (Premium)', callback_data: 'premium' }]
+              [{ text: '🆓 Free версия', callback_data: 'free' }],
+              [{ text: '⭐ Premium версия', callback_data: 'premium' }]
             ]
           }
         }
@@ -336,7 +336,7 @@ bot.on('callback_query', async (q) => {
   
     await sendAndSave(
       chatId,
-      '🎉 Отлично! Доступ к бесплатной версии открыт.\n\nНажмите кнопку ниже, чтобы начать использовать MindScape:',
+      '🎉 Отлично! Доступ к Free версии открыт.\n\nНажмите кнопку ниже, чтобы начать использовать MindScape:',
       {
         reply_markup: {
           inline_keyboard: [
@@ -545,7 +545,7 @@ bot.on('callback_query', async (q) => {
           reply_markup: {
             inline_keyboard: [
               [{ text: '⭐ Выбрать тариф', callback_data: 'premium' }],
-              [{ text: '🆓 Бесплатная версия', callback_data: 'free' }]
+              [{ text: '🆓 Free версия', callback_data: 'free' }]
             ]
           }
         }
@@ -972,4 +972,41 @@ console.log('🤖 MindScape бот запущен!');
 console.log('💳 Режим: Ручные переводы на карту');
 console.log('🧹 Автоочистка сообщений: ВКЛЮЧЕНА');
 console.log('📱 Кнопка меню: УСТАНОВЛЕНА');
+// 9. Эндпоинт для отправки сообщения с тарифами Premium пользователю
+app.post('/send-premium-plans', async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        // Отправляем сообщение пользователю с тарифами Premium
+        await bot.sendMessage(
+            userId,
+            '⭐ **Выберите тариф Premium:**\n\n' +
+            '_После оплата доступ откроется автоматически_',
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '7 дней — 129₽', callback_data: 'p7' }],
+                        [{ text: '30 дней — 499₽', callback_data: 'p30' }],
+                        [{ text: '90 дней — 999₽', callback_data: 'p90' }],
+                        [{ text: '⬅️ Назад', callback_data: 'check' }]
+                    ]
+                }
+            }
+        );
+
+        res.json({
+            success: true,
+            message: 'Premium plans message sent successfully'
+        });
+    } catch (error) {
+        console.error('Error sending premium plans:', error);
+        res.status(500).json({ error: 'Failed to send premium plans message' });
+    }
+});
+
 console.log('🌐 API для мини-приложения: ГОТОВ');

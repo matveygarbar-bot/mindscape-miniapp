@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 import { canCreateNote } from '../data';
 
 const SYMBOL_MAP = {
@@ -24,6 +25,7 @@ export default function NoteEditor({
   setToast,
   addNotification
 }) {
+  const { t } = useTranslation();
   const active = notes.find(n => n.id === activeNoteId);
 
   const [tempTitle, setTempTitle] = useState(() => active?.isNew ? '' : active?.title || '');
@@ -34,9 +36,9 @@ export default function NoteEditor({
   function createNote() {
     if (!canCreateNote(notes, isPremium)) {
       if (addNotification) {
-        addNotification('Ошибка', 'Максимум 5 заметок в Free версии', 'error');
+        addNotification(t('notificationError'), t('maxNotesFree'), 'error');
       } else {
-        setToast('⛔ Максимум 5 заметок в Free версии');
+        setToast('⛔ ' + t('maxNotesFree'));
       }
       return;
     }
@@ -51,7 +53,7 @@ export default function NoteEditor({
     setNotes([...notes, note]);
 
     if (addNotification) {
-      addNotification('Успешно', 'Новая заметка создана', 'success');
+      addNotification(t('notificationSuccess'), t('newNoteCreated'), 'success');
     }
   }
 
@@ -65,7 +67,7 @@ export default function NoteEditor({
       if (firstLine) {
         title = firstLine.split(' ').slice(0, 3).join(' ');
       } else {
-        title = 'Без названия';
+        title = t('noTasksYet'); // Using 'noTasksYet' as a placeholder for "Untitled"
       }
     }
 
@@ -136,7 +138,7 @@ export default function NoteEditor({
   if (!active) {
     return (
       <button className="new-note-btn" onClick={createNote}>
-        ＋ Новая заметка
+        {t('newNote')}
       </button>
     );
   }
@@ -156,17 +158,17 @@ export default function NoteEditor({
       {active.isNew && (
         <div className="title-bar">
           <input
-            placeholder="Введите короткое название новой заметки"
+            placeholder={t('enterShortTitle')}
             value={tempTitle}
             onChange={e => setTempTitle(e.target.value)}
           />
-          <button onClick={finalizeTitle}>✔</button>
+          <button onClick={finalizeTitle}>{t('save')}</button>
         </div>
       )}
 
       <textarea
         ref={textareaRef}
-        placeholder="Начните писать мысль..."
+        placeholder={t('startWriting')}
         value={active.text}
         onChange={e => updateText(e.target.value)}
       />
@@ -176,7 +178,7 @@ export default function NoteEditor({
           className="symbols-toggle"
           onClick={() => setShowSymbols(!showSymbols)}
         >
-          {showSymbols ? 'Скрыть символы' : 'Добавить символы'}
+          {showSymbols ? t('hideSymbols') : t('showSymbols')}
         </button>
 
         {showSymbols && (
@@ -185,7 +187,7 @@ export default function NoteEditor({
               <button
                 key={s}
                 onClick={() => insertSymbol(s)}
-                title={`Вставить символ ${s}`}
+                title={t('symbolToggle', { symbol: s })}
               >
                 {s}
               </button>
@@ -203,9 +205,9 @@ export default function NoteEditor({
             ));
           }}
         >
-          ✏
+          {t('edit')}
         </button>
-        <button onClick={removeNote}>🗑</button>
+        <button onClick={removeNote}>{t('delete')}</button>
       </div>
     </div>
   );
