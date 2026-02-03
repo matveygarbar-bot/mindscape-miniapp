@@ -112,28 +112,54 @@ function Today({ isPremium, addNotification, animationClass, focusTime, isFocusA
             // Попробуем получить userId из различных источников
             let userId = localStorage.getItem('userId');
 
+            console.log('Данные из localStorage:', { userId: localStorage.getItem('userId') });
+            console.log('Доступ к Telegram WebApp:', !!window.Telegram?.WebApp);
+            console.log('Данные из initDataUnsafe:', window.Telegram?.WebApp?.initDataUnsafe);
+            console.log('Данные пользователя из WebApp:', window.Telegram?.WebApp?.initDataUnsafe?.user);
+
             if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
               userId = window.Telegram.WebApp.initDataUnsafe.user.id;
               localStorage.setItem('userId', userId); // Сохраняем для дальнейшего использования
+              console.log('UserId получен из WebApp и сохранен в localStorage:', userId);
             }
 
             // Если userId все еще нет, пробуем получить напрямую из WebApp
             if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
               userId = window.Telegram.WebApp.initDataUnsafe.user.id;
               localStorage.setItem('userId', userId); // Сохраняем для дальнейшего использования
+              console.log('UserId получен напрямую из WebApp и сохранен в localStorage:', userId);
             }
 
             // Дополнительно проверим, может ли userId быть в другом формате
             if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
               userId = window.Telegram.WebApp.initDataUnsafe.user.id;
               localStorage.setItem('userId', userId);
+              console.log('UserId получен в альтернативном формате и сохранен в localStorage:', userId);
+            }
+
+            // Проверим, может ли userId быть доступен в другом формате
+            if (!userId && window.Telegram?.WebApp?.initData) {
+              try {
+                const initData = new URLSearchParams(window.Telegram.WebApp.initData);
+                const userParam = initData.get('user');
+                if (userParam) {
+                  const userObj = JSON.parse(decodeURIComponent(userParam));
+                  if (userObj.id) {
+                    userId = userObj.id;
+                    localStorage.setItem('userId', userId);
+                    console.log('UserId получен из initData в другом формате и сохранен в localStorage:', userId);
+                  }
+                }
+              } catch (error) {
+                console.log('Ошибка при парсинге initData:', error);
+              }
             }
 
             console.log('Полученный userId:', userId);
 
             if (userId) {
               console.log('Отправляем запрос в бота:', {
-                url: 'https://bitter-paws-occur.loca.lt/reminders',
+                url: 'https://ready-steaks-drop.loca.lt/reminders',
                 data: {
                   userId: parseInt(userId),
                   message: reminder.message,
