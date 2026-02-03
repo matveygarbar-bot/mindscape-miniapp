@@ -160,6 +160,28 @@ function App() {
     localStorage.setItem('isPremium', JSON.stringify(isPremium));
   }, [isPremium]);
 
+  // Получаем и сохраняем userId при загрузке приложения
+  useEffect(() => {
+    // Проверяем, доступен ли Telegram WebApp
+    if (window.Telegram?.WebApp) {
+      // Инициализируем WebApp
+      window.Telegram.WebApp.ready();
+
+      // Получаем userId из initData
+      const userId = window.Telegram.WebApp.initDataUnsafe?.user?.id;
+
+      if (userId) {
+        // Сохраняем userId в localStorage для дальнейшего использования
+        localStorage.setItem('userId', userId);
+        console.log('Telegram WebApp userId получен и сохранен:', userId);
+      } else {
+        console.log('Telegram WebApp userId недоступен');
+      }
+    } else {
+      console.log('Telegram WebApp недоступен');
+    }
+  }, []);
+
   // Функция для добавления нового уведомления
   const addNotification = (title, message, type = 'info') => {
     const newNotification = {

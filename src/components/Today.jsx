@@ -92,14 +92,52 @@ function Today({ isPremium, addNotification, animationClass, focusTime, isFocusA
       const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
       const currentDate = now.toISOString().split('T')[0];
 
-      for (const reminder of reminders) {
+      console.log('Проверка напоминаний:', {
+        currentTime,
+        currentDate,
+        remindersCount: reminders.length,
+        reminders: reminders.map(r => ({ id: r.id, time: r.time, date: r.date, notified: r.notified }))
+      });
+
+      // Получаем актуальные напоминания на момент проверки
+      const currentReminders = [...reminders];
+
+      for (const reminder of currentReminders) {
+        // Проверяем, что время совпадает и напоминание еще не было отправлено
         if (!reminder.notified && reminder.time === currentTime && reminder.date === currentDate) {
+          console.log('Найдено напоминание для отправки:', reminder);
+
           // Отправляем напоминание в бота
           try {
-            const userId = localStorage.getItem('userId') || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+            // Попробуем получить userId из различных источников
+            let userId = localStorage.getItem('userId');
+
+            if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+              userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+              localStorage.setItem('userId', userId); // Сохраняем для дальнейшего использования
+            }
+
+            // Если userId все еще нет, пробуем получить напрямую из WebApp
+            if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+              userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+              localStorage.setItem('userId', userId); // Сохраняем для дальнейшего использования
+            }
+
+            console.log('Полученный userId:', userId);
 
             if (userId) {
-              const response = await fetch('https://legal-bugs-tease.loca.lt/reminders', {
+              console.log('Отправляем запрос в бота:', {
+                url: 'https://bitter-paws-occur.loca.lt/reminders',
+                data: {
+                  userId: parseInt(userId),
+                  message: reminder.message,
+                  time: reminder.time,
+                  date: reminder.date,
+                  repeat: reminder.repeat
+                }
+              });
+
+              const response = await fetch('https://bitter-paws-occur.loca.lt/reminders', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -113,54 +151,155 @@ function Today({ isPremium, addNotification, animationClass, focusTime, isFocusA
                 }),
               });
 
+              console.log('Ответ от бота:', response.status);
+
               if (response.ok) {
                 // Успешно отправлено в бота
                 addNotification(t('reminderSentToBot') || 'Напоминание отправлено в бот', reminder.message);
+
+                // Обновляем состояние с помощью функционального обновления
+                setReminders(prevReminders => {
+                  const updatedReminders = prevReminders.map(r =>
+                    r.id === reminder.id ? {...r, notified: true} : r
+                  );
+
+                  // Если напоминание с повторением, создаем новое напоминание
+                  if (reminder.repeat !== 'no') {
+                    const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
+                    const newReminder = {
+                      ...reminder,
+                      date: nextDate,
+                      notified: false,
+                      id: Date.now() + Math.random() // Новый ID для следующего напоминания
+                    };
+
+                    // Удаляем старое напоминание и добавляем новое
+                    const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
+                    const finalReminders = [...filteredReminders, newReminder];
+
+                    // Сохраняем в localStorage
+                    localStorage.setItem('reminders', JSON.stringify(finalReminders));
+                    console.log('Создано новое повторяющееся напоминание:', newReminder);
+                    return finalReminders;
+                  } else {
+                    // Если без повторения, просто обновляем статус
+                    // Сохраняем в localStorage
+                    localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+                    console.log('Напоминание отмечено как отправленное:', reminder.id);
+                    return updatedReminders;
+                  }
+                });
               } else {
                 // Если не удалось отправить в бота, показываем локальное уведомление
+                console.log('Ошибка при отправке напоминания в бота:', response.status);
                 addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
+
+                // Все равно отмечаем как отправленное, чтобы не пытаться отправить снова
+                setReminders(prevReminders => {
+                  const updatedReminders = prevReminders.map(r =>
+                    r.id === reminder.id ? {...r, notified: true} : r
+                  );
+
+                  if (reminder.repeat !== 'no') {
+                    const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
+                    const newReminder = {
+                      ...reminder,
+                      date: nextDate,
+                      notified: false,
+                      id: Date.now() + Math.random()
+                    };
+
+                    const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
+                    const finalReminders = [...filteredReminders, newReminder];
+
+                    // Сохраняем в localStorage
+                    localStorage.setItem('reminders', JSON.stringify(finalReminders));
+                    console.log('Создано новое повторяющееся напоминание после ошибки:', newReminder);
+                    return finalReminders;
+                  } else {
+                    // Сохраняем в localStorage
+                    localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+                    console.log('Напоминание отмечено как отправленное после ошибки:', reminder.id);
+                    return updatedReminders;
+                  }
+                });
               }
             } else {
               // Если не удается получить userId, показываем локальное уведомление
+              console.log('Не удалось получить userId для отправки напоминания');
               addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
+
+              // Отмечаем как отправленное, чтобы не пытаться отправить снова
+              setReminders(prevReminders => {
+                const updatedReminders = prevReminders.map(r =>
+                  r.id === reminder.id ? {...r, notified: true} : r
+                );
+
+                if (reminder.repeat !== 'no') {
+                  const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
+                  const newReminder = {
+                    ...reminder,
+                    date: nextDate,
+                    notified: false,
+                    id: Date.now() + Math.random()
+                  };
+
+                  const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
+                  const finalReminders = [...filteredReminders, newReminder];
+
+                  // Сохраняем в localStorage
+                  localStorage.setItem('reminders', JSON.stringify(finalReminders));
+                  console.log('Создано новое повторяющееся напоминание после ошибки получения userId:', newReminder);
+                  return finalReminders;
+                } else {
+                  // Сохраняем в localStorage
+                  localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+                  console.log('Напоминание отмечено как отправленное после ошибки получения userId:', reminder.id);
+                  return updatedReminders;
+                }
+              });
             }
           } catch (error) {
             console.error('Error sending reminder to bot:', error);
             // В случае ошибки показываем локальное уведомление
             addNotification(t('reminderNotification') || 'Напоминание', reminder.message);
-          }
 
-          // Отмечаем напоминание как отправленное
-          const updatedReminders = reminders.map(r =>
-            r.id === reminder.id ? {...r, notified: true} : r
-          );
+            // Отмечаем как отправленное, чтобы не пытаться отправить снова
+            setReminders(prevReminders => {
+              const updatedReminders = prevReminders.map(r =>
+                r.id === reminder.id ? {...r, notified: true} : r
+              );
 
-          // Если напоминание с повторением, создаем новое напоминание
-          if (reminder.repeat !== 'no') {
-            const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
-            const newReminder = {
-              ...reminder,
-              date: nextDate,
-              notified: false,
-              id: Date.now() + Math.random() // Новый ID для следующего напоминания
-            };
+              if (reminder.repeat !== 'no') {
+                const nextDate = getNextRepeatDate(reminder.date, reminder.repeat);
+                const newReminder = {
+                  ...reminder,
+                  date: nextDate,
+                  notified: false,
+                  id: Date.now() + Math.random()
+                };
 
-            // Удаляем старое напоминание и добавляем новое
-            const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
-            const finalReminders = [...filteredReminders, newReminder];
-            setReminders(finalReminders);
-            localStorage.setItem('reminders', JSON.stringify(finalReminders));
-          } else {
-            // Если без повторения, просто обновляем статус
-            setReminders(updatedReminders);
-            localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+                const filteredReminders = updatedReminders.filter(r => r.id !== reminder.id);
+                const finalReminders = [...filteredReminders, newReminder];
+
+                // Сохраняем в localStorage
+                localStorage.setItem('reminders', JSON.stringify(finalReminders));
+                console.log('Создано новое повторяющееся напоминание после ошибки сети:', newReminder);
+                return finalReminders;
+              } else {
+                // Сохраняем в localStorage
+                localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+                console.log('Напоминание отмечено как отправленное после ошибки сети:', reminder.id);
+                return updatedReminders;
+              }
+            });
           }
         }
       }
     };
 
-    // Проверяем напоминания каждую минуту
-    const interval = setInterval(checkReminders, 60000); // 60000 мс = 1 минута
+    // Проверяем напоминания каждую секунду
+    const interval = setInterval(checkReminders, 1000); // 1000 мс = 1 секунда
 
     // Очищаем интервал при размонтировании компонента
     return () => clearInterval(interval);

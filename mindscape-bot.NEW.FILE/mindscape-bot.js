@@ -825,7 +825,7 @@ app.post('/create-payment', (req, res) => {
 });
 
 // 5. Добавление напоминания
-app.post('/reminders', (req, res) => {
+app.post('/reminders', async (req, res) => {
     console.log('Получен запрос на создание напоминания:', req.body);
     try {
         const { userId, message, time, date, repeat = 'no' } = req.body;
@@ -835,15 +835,29 @@ app.post('/reminders', (req, res) => {
             return res.status(400).json({ error: 'User ID, message, time, and date are required' });
         }
 
-        const reminderId = addReminder(userId, message, time, date, repeat);
+        // Отправляем напоминание пользователю в Telegram
+        try {
+            await bot.sendMessage(userId, `🔔 Вам пришло напоминание:\n\n${message}`);
 
-        console.log(`Напоминание успешно добавлено для пользователя ${userId}:`, { reminderId, message, time, date, repeat });
+            // Отправляем успешный ответ
+            res.json({
+                success: true,
+                message: 'Напоминание успешно отправлено пользователю'
+            });
+        } catch (error) {
+            console.error('Ошибка при отправке напоминания пользователю:', error);
 
-        res.json({
-            success: true,
-            reminderId: reminderId,
-            message: 'Напоминание успешно добавлено'
-        });
+            // Если не удалось отправить напоминание пользователю, добавляем его в локальное хранилище
+            const reminderId = addReminder(userId, message, time, date, repeat);
+
+            console.log(`Напоминание добавлено в локальное хранилище для пользователя ${userId}:`, { reminderId, message, time, date, repeat });
+
+            res.json({
+                success: true,
+                reminderId: reminderId,
+                message: 'Напоминание добавлено в очередь (не удалось отправить напрямую)'
+            });
+        }
     } catch (error) {
         console.error('Error in /reminders:', error);
         return res.status(500).json({ error: 'Internal server error' });
