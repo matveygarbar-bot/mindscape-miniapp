@@ -123,6 +123,12 @@ function Today({ isPremium, addNotification, animationClass, focusTime, isFocusA
               localStorage.setItem('userId', userId); // Сохраняем для дальнейшего использования
             }
 
+            // Дополнительно проверим, может ли userId быть в другом формате
+            if (!userId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+              userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+              localStorage.setItem('userId', userId);
+            }
+
             console.log('Полученный userId:', userId);
 
             if (userId) {
@@ -137,7 +143,7 @@ function Today({ isPremium, addNotification, animationClass, focusTime, isFocusA
                 }
               });
 
-              const response = await fetch('https://bitter-paws-occur.loca.lt/reminders', {
+              const response = await fetch('https://ready-steaks-drop.loca.lt/reminders', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
