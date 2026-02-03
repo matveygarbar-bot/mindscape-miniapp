@@ -409,6 +409,13 @@ function CalendarSection({ isPremium, addNotification, animationClass, language 
       <div className="section-content">
 
       <div className="calendar-container">
+        {/* Кнопка выбора месяца/года (расположена выше календаря) */}
+        <div className="month-year-selector-container">
+          <button className="month-year-selector" onClick={() => setShowMonthYearPicker(true)}>
+            {getMonthYearDisplay(date)} ▼
+          </button>
+        </div>
+
         <div className="calendar-controls">
           <button
             className={view === 'month' ? 'active-view' : ''}

@@ -761,6 +761,34 @@ body.light-theme .calendar-container {
   transform: scale(1.05);
 }
 
+/* Стили для кнопки выбора месяца/года */
+.month-year-selector-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-md);
+}
+
+.month-year-selector {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.month-year-selector:hover {
+  background: var(--color-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 /* Стили для календаря */
 .calendar-controls {
   display: flex;
